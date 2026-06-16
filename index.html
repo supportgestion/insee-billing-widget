@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche INSEE - Billing AlphaLink</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #f8f9fb; color: #1a1a2e; padding: 24px; min-height: 100vh; }
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .header-icon { width: 44px; height: 44px; background: linear-gradient(135deg, #059669, #10b981); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
+        .header-text h1 { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+        .header-text p { font-size: 13px; color: #6b7280; margin-top: 2px; }
+        .search-section { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); margin-bottom: 20px; }
+        .search-row { display: flex; gap: 10px; }
+        .search-input { flex: 1; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; outline: none; }
+        .search-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+        .btn-search { padding: 12px 24px; background: linear-gradient(135deg, #059669, #10b981); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .btn-search:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35); }
+        .btn-search:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status-bar { margin-top: 12px; font-size: 13px; color: #6b7280; display: none; }
+        .status-bar.visible { display: block; }
+        .results-section { display: none; }
+        .results-section.visible { display: block; }
+        .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .results-header h2 { font-size: 15px; font-weight: 600; }
+        .results-count { background: #d1fae5; color: #059669; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .result-card { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .result-card:hover { border-color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15); transform: translateY(-1px); }
+        .result-card.selected { border-color: #059669; background: #ecfdf5; }
+        .result-card .company-name { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .result-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-top: 8px; }
+        .detail-item { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; }
+        .detail-label { color: #9ca3af; font-weight: 500; }
+        .detail-value { color: #374151; font-weight: 500; }
+        .action-bar { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; flex-direction: column; gap: 15px; }
+        .action-bar.visible { display: flex; }
+        .contact-form { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; }
+        .contact-input { padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
+        .contact-input:focus { border-color: #10b981; }
+        .btn-validate { align-self: flex-end; padding: 12px 24px; background: linear-gradient(135deg, #059669, #10b981); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-validate:hover { box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35); }
+        .btn-validate:disabled { opacity: 0.6; cursor: not-allowed; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-icon">IN</div>
+        <div class="header-text">
+            <h1>Recherche INSEE - Billing</h1>
+            <p>Création rapide d'un client</p>
+        </div>
+    </div>
+    <div class="search-section">
+        <div class="search-row">
+            <input type="text" class="search-input" id="searchInput" placeholder="Saisissez la raison sociale..." autofocus>
+            <button class="btn-search" id="btnSearch" onclick="searchCompany()">Rechercher</button>
+        </div>
+        <div class="status-bar" id="statusBar"></div>
+    </div>
+    <div class="results-section" id="resultsSection">
+        <div class="results-header">
+            <h2>Résultats INSEE</h2>
+            <span class="results-count" id="resultsCount"></span>
+        </div>
+        <div id="resultsContainer"></div>
+    </div>
+    <div class="action-bar" id="actionBar">
+        <div class="contact-form">
+            <input type="text" id="contactFirstName" class="contact-input" placeholder="Prénom">
+            <input type="text" id="contactLastName" class="contact-input" placeholder="Nom">
+            <input type="email" id="contactEmail" class="contact-input" placeholder="Email (Obligatoire)*" required>
+        </div>
+        <button class="btn-validate" id="btnValidate" onclick="validateSelection()" disabled>Créer ce client</button>
+    </div>
+
+    <script>
+        let selectedCompany = null;
+        let currentResults = [];
+
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') searchCompany();
+        });
+
+        document.getElementById('contactEmail').addEventListener('input', function(e) {
+            var btn = document.getElementById('btnValidate');
+            if(e.target.value.trim() !== "" && selectedCompany !== null) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        });
+
+        function calculerTVA(siren) {
+            if (!siren) return "";
+            var sirenNum = parseInt(siren);
+            if (isNaN(sirenNum)) return "";
+            var cle = ((12 + 3 * (sirenNum % 97)) % 97);
+            var cleStr = cle < 10 ? "0" + cle : "" + cle;
+            return "FR" + cleStr + siren;
+        }
+
+        async function searchCompany() {
+            var query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            var btn = document.getElementById('btnSearch');
+            var statusBar = document.getElementById('statusBar');
+            var resultsSection = document.getElementById('resultsSection');
+            var resultsContainer = document.getElementById('resultsContainer');
+            var actionBar = document.getElementById('actionBar');
+
+            selectedCompany = null;
+            document.getElementById('btnValidate').disabled = true;
+            document.getElementById('contactFirstName').value = '';
+            document.getElementById('contactLastName').value = '';
+            document.getElementById('contactEmail').value = '';
+            
+            actionBar.classList.remove('visible');
+            btn.disabled = true;
+            btn.textContent = 'Recherche...';
+            statusBar.className = 'status-bar visible';
+            statusBar.textContent = "Recherche en cours...";
+            resultsSection.classList.add('visible');
+            resultsContainer.innerHTML = '';
+
+            try {
+                var url = "https://recherche-entreprises.api.gouv.fr/search?q=" + encodeURIComponent(query) + "&per_page=10";
+                var response = await fetch(url);
+                var data = await response.json();
+
+                currentResults = data.results || [];
+
+                if (currentResults.length === 0) {
+                    resultsContainer.innerHTML = '<div class="empty-state">Aucun résultat trouvé</div>';
+                    document.getElementById('resultsCount').textContent = '0 résultat';
+                } else {
+                    document.getElementById('resultsCount').textContent = currentResults.length + ' résultat(s)';
+                    var html = '';
+                    for (var i = 0; i < currentResults.length; i++) {
+                        var company = currentResults[i];
+                        var siege = company.siege || {};
+                        var tva = calculerTVA("" + company.siren);
+
+                        html += '<div class="result-card" id="card-' + i + '" onclick="selectCompany(' + i + ')">';
+                        html += '<div class="company-name">' + (company.nom_complet || company.nom_raison_sociale || '—') + '</div>';
+                        html += '<div class="result-details">';
+                        html += '<div class="detail-item"><span class="detail-label">SIRET :</span><span class="detail-value">' + (siege.siret || '—') + '</span></div>';
+                        html += '<div class="detail-item"><span class="detail-label">TVA :</span><span class="detail-value">' + (tva || '—') + '</span></div>';
+                        html += '<div class="detail-item"><span class="detail-label">Adresse :</span><span class="detail-value">' + (siege.adresse || '—') + '</span></div>';
+                        html += '</div></div>';
+                    }
+                    resultsContainer.innerHTML = html;
+                }
+                actionBar.classList.add('visible');
+                statusBar.className = 'status-bar';
+            } catch (error) {
+                statusBar.className = 'status-bar visible';
+                statusBar.textContent = 'Erreur API';
+            }
+            btn.disabled = false;
+            btn.textContent = 'Rechercher';
+        }
+
+        function selectCompany(index) {
+            var cards = document.querySelectorAll('.result-card');
+            for (var j = 0; j < cards.length; j++) {
+                cards[j].classList.remove('selected');
+            }
+            document.getElementById('card-' + index).classList.add('selected');
+            selectedCompany = currentResults[index];
+            
+            if(document.getElementById('contactEmail').value.trim() !== "") {
+                document.getElementById('btnValidate').disabled = false;
+            }
+        }
+
+        function validateSelection() {
+            if (!selectedCompany) return;
+            
+            var email = document.getElementById('contactEmail').value.trim();
+            if(!email) {
+                alert("Veuillez saisir une adresse email.");
+                return;
+            }
+
+            var btn = document.getElementById('btnValidate');
+            btn.disabled = true;
+            btn.textContent = 'Création en cours...';
+
+            var siege = selectedCompany.siege || {};
+            var siren = "" + selectedCompany.siren;
+            var nom = selectedCompany.nom_complet || selectedCompany.nom_raison_sociale || "";
+            var tva = calculerTVA(siren);
+            
+            var firstName = document.getElementById('contactFirstName').value.trim();
+            var lastName = document.getElementById('contactLastName').value.trim();
+
+            var webhookBaseUrl = "https://flow.zoho.eu/20112947589/flow/webhook/incoming?zapikey=1001.665d1614cef2ebc99657242c3cc862d4.f0a58abc3aa588a64d4fff3dc89d19da&isdebug=false";
+            
+            var params = new URLSearchParams();
+            params.append("company_name", nom);
+            params.append("billing_street", siege.adresse || "");
+            params.append("billing_zip", siege.code_postal || "");
+            params.append("billing_city", siege.libelle_commune || "");
+            params.append("siret", siege.siret || "");
+            params.append("tva", tva || "");
+            params.append("first_name", firstName);
+            params.append("last_name", lastName);
+            params.append("email", email);
+
+            var finalUrl = webhookBaseUrl + "&" + params.toString();
+
+            var img = new Image();
+            img.onload = function() { success(); };
+            img.onerror = function() { success(); }; 
+            img.src = finalUrl;
+
+            function success() {
+                btn.textContent = 'Client créé !';
+                btn.style.background = '#059669';
+                setTimeout(function() {
+                    btn.textContent = 'Créer ce client';
+                    btn.style.background = '';
+                    document.getElementById('contactEmail').value = '';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
