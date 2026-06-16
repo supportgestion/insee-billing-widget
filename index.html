@@ -198,11 +198,17 @@
             var firstName = document.getElementById('contactFirstName').value.trim();
             var lastName = document.getElementById('contactLastName').value.trim();
 
+            // Nettoyage automatique de l'adresse
+            var adresseComplete = siege.adresse || "";
+            var ville = siege.libelle_commune || "";
+            var codePostal = siege.code_postal || "";
+            var adresseRue = adresseComplete.replace(codePostal, "").replace(ville, "").replace(/,\s*$/, "").trim();
+
             var webhookBaseUrl = "https://flow.zoho.eu/20112947589/flow/webhook/incoming?zapikey=1001.665d1614cef2ebc99657242c3cc862d4.f0a58abc3aa588a64d4fff3dc89d19da&isdebug=false";
             
             var params = new URLSearchParams();
             params.append("company_name", nom);
-            params.append("billing_street", siege.adresse || "");
+            params.append("billing_street", adresseRue);
             params.append("billing_zip", siege.code_postal || "");
             params.append("billing_city", siege.libelle_commune || "");
             params.append("siret", siege.siret || "");
@@ -225,6 +231,8 @@
                     btn.textContent = 'Créer ce client';
                     btn.style.background = '';
                     document.getElementById('contactEmail').value = '';
+                    document.getElementById('contactFirstName').value = '';
+                    document.getElementById('contactLastName').value = '';
                 }, 3000);
             }
         }
